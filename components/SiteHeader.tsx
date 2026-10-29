@@ -12,6 +12,7 @@ import {
   useAuth,
 } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
+import { PlanButton } from "./PlanButton";
 
 // Shared across every route (root layout). The landing page gets its section links and a way into
 // the app; inside the app, the logo leads home to the dashboard and the plan button takes its place.
@@ -77,10 +78,12 @@ export function SiteHeader() {
             afterCreateOrganizationUrl="/dashboard"
             afterSelectOrganizationUrl="/dashboard"
           />
-          {isLandingPage && (
+          {isLandingPage ? (
             <Button asChild size="sm">
               <Link href="/dashboard">Dashboard</Link>
             </Button>
+          ) : (
+            <PlanButton />
           )}
           <UserButton />
         </Show>
