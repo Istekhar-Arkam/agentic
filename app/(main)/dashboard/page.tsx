@@ -18,7 +18,10 @@ export default async function DashboardPage() {
   if (!user) redirect("/sign-in");
 
   const { orgName, where } = await getWorkspaceScope(user.id);
-  const workspaces = await prisma.workspace.findMany({ where, select: workspaceCardSelect });
+  const workspaces = await prisma.workspace.findMany({
+    where,
+    select: workspaceCardSelect,
+  });
   const recent = workspaces
     .map(withLastActivity)
     .sort((a, b) => compareDesc(a.lastActivity, b.lastActivity))
