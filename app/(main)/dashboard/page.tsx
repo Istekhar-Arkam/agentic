@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { KanbanSquare, Plus } from "lucide-react";
@@ -13,7 +14,21 @@ import { DashboardPrompt } from "./_components/DashboardPrompt";
 
 const RECENT_COUNT = 4;
 
-export default async function DashboardPage() {
+// 1. Page is now synchronous: no awaits here, so it prerenders as a static shell
+export default function DashboardPage() {
+  return (
+    <div className="p-8">
+      <DashboardPrompt />
+
+      <Suspense fallback={<WorkspacesSkeleton />}>
+        <WorkspacesSection />
+      </Suspense>
+    </div>
+  );
+}
+
+// 2. All request-time data access lives inside the Suspense boundary
+async function WorkspacesSection() {
   const user = await checkUser();
   if (!user) redirect("/sign-in");
 
@@ -28,49 +43,65 @@ export default async function DashboardPage() {
     .slice(0, RECENT_COUNT);
 
   return (
-    <div className="p-8">
-      <DashboardPrompt />
-
-      <section className="mx-auto max-w-6xl">
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground">{orgName}</p>
-            <h2 className="text-lg font-semibold">Recent workspaces</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {workspaces.length > 0 && (
-              <Button
-                asChild
-                variant="ghost"
-                size="sm"
-                className="gap-1.5 text-muted-foreground"
-              >
-                <Link href="/workspaces">
-                  <KanbanSquare className="size-4" />
-                  View board ({workspaces.length})
-                </Link>
-              </Button>
-            )}
-            <WorkspaceDialog
-              trigger={
-                <Button variant="outline" size="sm" className="gap-1.5">
-                  <Plus className="size-4" />
-                  New workspace
-                </Button>
-              }
-            />
-          </div>
+    <section className="mx-auto max-w-6xl">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs text-muted-foreground">{orgName}</p>
+          <h2 className="text-lg font-semibold">Recent workspaces</h2>
         </div>
+        <div className="flex items-center gap-2">
+          {workspaces.length > 0 && (
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground"
+            >
+              <Link href="/workspaces">
+                <KanbanSquare className="size-4" />
+                View board ({workspaces.length})
+              </Link>
+            </Button>
+          )}
+          <WorkspaceDialog
+            trigger={
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Plus className="size-4" />
+                New workspace
+              </Button>
+            }
+          />
+        </div>
+      </div>
 
-        {workspaces.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-white/10 py-10 text-center text-sm text-muted-foreground">
-            No workspaces yet. Describe what you want to plan above to start
-            one.
-          </p>
-        ) : (
-          <RecentWorkspaces workspaces={recent} />
-        )}
-      </section>
-    </div>
+      {workspaces.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-white/10 py-10 text-center text-sm text-muted-foreground">
+          No workspaces yet. Describe what you want to plan above to start
+          one.
+        </p>
+      ) : (
+        <RecentWorkspaces workspaces={recent} />
+      )}
+    </section>
+  );
+}
+
+// 3. Placeholder shown while the data streams in
+function WorkspacesSkeleton() {
+  return (
+    <section className="mx-auto max-w-6xl">
+      <div className="mb-4 flex items-end justify-between gap-4">
+        <div className="space-y-2">
+          <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-5 w-40 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-8 w-36 animate-pulse rounded bg-muted" />
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: RECENT_COUNT }).map((_, i) => (
+          <div key={i} className="h-32 animate-pulse rounded-xl bg-muted" />
+        ))}
+      </div>
+    </section>
   );
 }

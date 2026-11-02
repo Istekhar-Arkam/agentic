@@ -7,8 +7,21 @@ import {
   type TLShapePartial,
   type VecModel,
 } from "tldraw";
-import { TABLE_WIDTH, getTableHeight, newRow, rowAnchorY, type EntityRow, type EntityTableShape } from "@/components/EntityTable/EntityTableShape";
-import { canvasToolDefs, fail, normalizeModelText, ok, type ToolResult } from "@/lib/agent-tools";
+import {
+  TABLE_WIDTH,
+  getTableHeight,
+  newRow,
+  rowAnchorY,
+  type EntityRow,
+  type EntityTableShape,
+} from "@/components/EntityTable/EntityTableShape";
+import {
+  canvasToolDefs,
+  fail,
+  normalizeModelText,
+  ok,
+  type ToolResult,
+} from "@/lib/agent-tools";
 
 // Maps the model's caller-assigned ids ("rect-1") to real tldraw ids, so later calls in the same
 // chat can reference shapes it just created. Pre-existing shapes are referenced by their real ids.
@@ -25,7 +38,10 @@ function summarizeShape(shape: TLShape) {
   const base = `- id: ${shape.id}, type: ${shape.type}, position: (${Math.round(shape.x)}, ${Math.round(shape.y)})`;
   if (shape.type === "entity-table") {
     const { tableName, rows } = (shape as EntityTableShape).props;
-    const columns = rows.map((r) => `${r.name}:${r.dataType}${r.isPK ? " PK" : ""}${r.isFK ? " FK" : ""}`);
+    const columns = rows.map(
+      (r) =>
+        `${r.name}:${r.dataType}${r.isPK ? " PK" : ""}${r.isFK ? " FK" : ""}`,
+    );
     return `${base}, table: "${tableName}", columns: [${columns.join(", ")}]`;
   }
   const text = "richText" in shape.props ? plainText(shape.props.richText) : "";
@@ -36,7 +52,9 @@ function summarizeShape(shape: TLShape) {
 function plainText(node: unknown): string {
   if (typeof node !== "object" || node === null) return "";
   const { text, content } = node as { text?: string; content?: unknown[] };
-  return [text ?? "", ...(content ?? []).map(plainText)].filter(Boolean).join(" ");
+  return [text ?? "", ...(content ?? []).map(plainText)]
+    .filter(Boolean)
+    .join(" ");
 }
 
 const richText = (text: string) => toRichText(normalizeModelText(text));
@@ -53,13 +71,18 @@ function lookupShape(editor: Editor, idMap: ShapeIdMap, id: string) {
 
 function lookupTable(editor: Editor, idMap: ShapeIdMap, id: string) {
   const shape = lookupShape(editor, idMap, id);
-  return shape?.type === "entity-table" ? (shape as EntityTableShape) : undefined;
+  return shape?.type === "entity-table"
+    ? (shape as EntityTableShape)
+    : undefined;
 }
 
 // Where an arrow should attach on a table: the vertical center of the named column's row.
 function rowAnchor(table: EntityTableShape, columnName: string): VecModel {
   const index = table.props.rows.findIndex((r) => r.name === columnName);
-  return { x: 0.5, y: index === -1 ? 0.5 : rowAnchorY(index, table.props.rows.length) };
+  return {
+    x: 0.5,
+    y: index === -1 ? 0.5 : rowAnchorY(index, table.props.rows.length),
+  };
 }
 
 function createArrowBetween(
@@ -67,7 +90,7 @@ function createArrowBetween(
   arrowId: TLShapeId,
   from: { id: TLShapeId; anchor?: VecModel },
   to: { id: TLShapeId; anchor?: VecModel },
-  label?: string
+  label?: string,
 ) {
   const fromBounds = editor.getShapePageBounds(from.id);
   const toBounds = editor.getShapePageBounds(to.id);
@@ -83,7 +106,10 @@ function createArrowBetween(
       ...(label && { richText: richText(label) }),
     },
   });
-  for (const [terminal, end] of [["start", from], ["end", to]] as const) {
+  for (const [terminal, end] of [
+    ["start", from],
+    ["end", to],
+  ] as const) {
     editor.createBinding({
       type: "arrow",
       fromId: arrowId,
@@ -106,7 +132,12 @@ function fontSizeToStyle(px: number) {
   return "xl";
 }
 
-export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: string, rawInput: unknown): ToolResult {
+export function executeCanvasTool(
+  editor: Editor,
+  idMap: ShapeIdMap,
+  toolName: string,
+  rawInput: unknown,
+): ToolResult {
   const defs = canvasToolDefs;
   switch (toolName) {
     case "createRectangle":
@@ -134,7 +165,10 @@ export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: s
         type: "text",
         x: input.position.x,
         y: input.position.y,
-        props: { richText: richText(input.text), ...(input.fontSize && { size: fontSizeToStyle(input.fontSize) }) },
+        props: {
+          richText: richText(input.text),
+          ...(input.fontSize && { size: fontSizeToStyle(input.fontSize) }),
+        },
       });
       return ok();
     }
@@ -143,8 +177,15 @@ export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: s
       const input = defs.createArrow.inputSchema.parse(rawInput);
       const from = lookupShape(editor, idMap, input.fromShapeId);
       const to = lookupShape(editor, idMap, input.toShapeId);
-      if (!from || !to) return fail("fromShapeId or toShapeId does not refer to a known shape");
-      return createArrowBetween(editor, resolveNewId(idMap, input.id), { id: from.id }, { id: to.id }, input.label);
+      if (!from || !to)
+        return fail("fromShapeId or toShapeId does not refer to a known shape");
+      return createArrowBetween(
+        editor,
+        resolveNewId(idMap, input.id),
+        { id: from.id },
+        { id: to.id },
+        input.label,
+      );
     }
 
     case "updateShape": {
@@ -159,7 +200,8 @@ export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: s
         props: {
           ...(input.width && { w: input.width }),
           ...(input.height && { h: input.height }),
-          ...(input.label && "richText" in shape.props && { richText: richText(input.label) }),
+          ...(input.label &&
+            "richText" in shape.props && { richText: richText(input.label) }),
         },
       } as TLShapePartial<TLShape>);
       return ok();
@@ -181,7 +223,12 @@ export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: s
         type: "entity-table",
         x: input.position.x,
         y: input.position.y,
-        props: { w: TABLE_WIDTH, h: getTableHeight(rows.length), tableName: input.tableName, rows },
+        props: {
+          w: TABLE_WIDTH,
+          h: getTableHeight(rows.length),
+          tableName: input.tableName,
+          rows,
+        },
       });
       return ok();
     }
@@ -193,7 +240,10 @@ export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: s
       const table = lookupTable(editor, idMap, tableId);
       if (!table) return fail("Unknown table id");
       const rows = columnRows(table.props.rows, toolName, column);
-      if (!rows) return fail(`No column named "${"columnName" in column ? column.columnName : ""}"`);
+      if (!rows)
+        return fail(
+          `No column named "${"columnName" in column ? column.columnName : ""}"`,
+        );
       editor.updateShape<EntityTableShape>({
         id: table.id,
         type: "entity-table",
@@ -210,8 +260,11 @@ export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: s
       return createArrowBetween(
         editor,
         resolveNewId(idMap, input.id),
-        { id: fromTable.id, anchor: rowAnchor(fromTable, input.fromColumnName) },
-        { id: toTable.id, anchor: rowAnchor(toTable, input.toColumnName) }
+        {
+          id: fromTable.id,
+          anchor: rowAnchor(fromTable, input.fromColumnName),
+        },
+        { id: toTable.id, anchor: rowAnchor(toTable, input.toColumnName) },
       );
     }
 
@@ -222,15 +275,28 @@ export function executeCanvasTool(editor: Editor, idMap: ShapeIdMap, toolName: s
 
 type ColumnInput =
   | { name: string; dataType: string; isPK: boolean; isFK: boolean }
-  | { columnName: string; name?: string; dataType?: string; isPK?: boolean; isFK?: boolean };
+  | {
+      columnName: string;
+      name?: string;
+      dataType?: string;
+      isPK?: boolean;
+      isFK?: boolean;
+    };
 
 // Returns the table's new rows, or null when the named column doesn't exist.
-function columnRows(rows: EntityRow[], toolName: string, input: ColumnInput): EntityRow[] | null {
+function columnRows(
+  rows: EntityRow[],
+  toolName: string,
+  input: ColumnInput,
+): EntityRow[] | null {
   if (!("columnName" in input)) return [...rows, newRow(input)];
   if (!rows.some((r) => r.name === input.columnName)) return null;
-  if (toolName === "removeColumn") return rows.filter((r) => r.name !== input.columnName);
+  if (toolName === "removeColumn")
+    return rows.filter((r) => r.name !== input.columnName);
 
   const { columnName, ...changes } = input;
-  const defined = Object.fromEntries(Object.entries(changes).filter(([, value]) => value !== undefined));
+  const defined = Object.fromEntries(
+    Object.entries(changes).filter(([, value]) => value !== undefined),
+  );
   return rows.map((r) => (r.name === columnName ? { ...r, ...defined } : r));
 }
